@@ -5,6 +5,7 @@
 # Usage:
 #
 #     wordler.pl        - choose a random word
+#     wordler.pl -1     - use yesterday's wordle (also -2, -3, etc.)
 #     wordler.pl [word] - use the given 5-letter word
 #     wordler.pl [123]  - use the Nth word in the word list
 #     wordler.pl -auto  - I solve the puzzle on my own
@@ -18,7 +19,7 @@ use strict;
 use warnings;
 
 my $words = "./words";  # common words, used when we pick a word
-my $dict = "./dict";  # all words, used to validate guesses
+my $dict = "./common";  # all words, used to validate guesses
 my $letters = "abcdefghijklmnopqrstuvwxyz";
 my $maxguess = 6;
 my $nguess = 0;
@@ -38,6 +39,7 @@ my $debug = 0;
 # check for command-line options
 while ($_ = $ARGV[0] and /^-/) {
     shift;
+    /^-(\d+)$/ && ($day=$1);
     /^-auto/ && ($auto++);
     /^-debug/ && ($debug++);
 }
@@ -176,6 +178,20 @@ sub check {
 	}
 	$letters =~ s/$letter//;
 	$n++;
+    }
+    #
+    # remove any extra letters from response
+    # (when a letter appears more times in a guess than in the solution)
+    #
+    for (my $i=$wordlen-1; $i >= 0; $i--) {
+	my $char = substr($response,$i,1);
+	if ($char =~ /[a-z]/) {  # lower-case letter
+	    my $a_count = () = ($answer =~ /$char/g);    # count in answer
+	    my $r_count = () = ($response =~ /$char/gi); # count in response
+	    if ($r_count > $a_count) {
+		substr($response,$i,1) = "_";
+	    }
+	}
     }
     print "         $response";
     $pattern = join('', '^', @p);
