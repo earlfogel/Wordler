@@ -19,7 +19,7 @@ use strict;
 use warnings;
 
 my $words = "./words";  # common words, used when we pick a word
-my $dict = "./common";  # all words, used to validate guesses
+my $dict = "./dict";  # all words, used to validate guesses
 my $letters = "abcdefghijklmnopqrstuvwxyz";
 my $maxguess = 6;
 my $nguess = 0;
