@@ -44,6 +44,7 @@ while ($_ = $ARGV[0] and /^-/) {
     /^--?today$/ && ($day=0);
     /^--?auto/ && ($auto++);
     /^--?debug/ && ($debug++);
+    #die "Invalid option $_";
 }
 
 setup();
@@ -76,13 +77,17 @@ print "Sorry, the word was: $answer\n";
 #
 sub setup {
     #
-    # read the wordlists and create hashes
+    # read the word lists
     #
-    foreach my $word (split /\n\r?/, read_file($words)) {
+    my $text = read_file($words);
+    while ($text =~ /\b([a-z]{$wordlen})\b/g) {
+	my $word = $1;
 	push(@common_words,$word);
 	$all_words{$word} = 2;  # prefer common words when we guess
     }
-    foreach my $word (split /\n\r?/, read_file($dict)) {
+    $text = read_file($dict);
+    while ($text =~ /\b([a-z]{$wordlen})\b/g) {
+	my $word = $1;
 	$all_words{$word}++;
     }
     %possible_words = %all_words;
