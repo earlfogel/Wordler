@@ -218,6 +218,26 @@ sub check {
     print "         $response";
     $pattern = join('', '^', @p);
     delete %possible_words{grep(!/$pattern/, keys %possible_words)}; # remove impossibles
+
+    #
+    # if the guess contains duplicate letters, ...
+    #
+    my %g_count;
+    my $before = keys %possible_words;
+    foreach my $letter (split //, $guess) {
+	$g_count{$letter}++;
+    }
+    foreach my $letter (keys %g_count) {
+	if ($g_count{$letter} == 2) {
+	    my $r_count = () = ($response =~ /$letter/gi);
+	    delete %possible_words{grep(!/$letter.*$letter/, keys %possible_words)}
+		if $r_count == 2;  # answer has more than one $letter
+	    delete %possible_words{grep(/$letter.*$letter/, keys %possible_words)}
+		if $r_count == 1;  # answer has only one $letter
+	}
+    }
+    my $after = keys %possible_words;
+
     if ($guess ne $answer) {
 	delete $possible_words{$guess};	# remove this guess
 	my $n = keys %possible_words;
@@ -229,6 +249,8 @@ sub check {
 	    print "  " . $n . " words left";
 	}
     }
+    #print " (down from $before due to repeats)" if $before > $after && $debug;
+
     print "\n";
     return $response;
 }
