@@ -5,8 +5,9 @@
 # Usage:
 #
 #     wordler.pl        - choose a random word
-#     wordler.pl -1     - use yesterday's wordle (also -2, -3, etc.)
-#     wordler.pl [word] - use the given 5-letter word
+#     wordler.pl -today - use today's word
+#     wordler.pl -1     - use yesterday's word (also -2, -3, etc.)
+#     wordler.pl [word] - use the given word
 #     wordler.pl [123]  - use the Nth word in the word list
 #     wordler.pl -auto  - I solve the puzzle on my own
 #     wordler.pl -debug - show debugging info
@@ -19,13 +20,13 @@ use strict;
 use warnings;
 
 my $words = "./words";  # common words, used when we pick a word
-my $dict = "./dict";  # all words, used to validate guesses
+my $dict = "./dict";  # more words, used to validate guesses
 my $letters = "abcdefghijklmnopqrstuvwxyz";
 my $maxguess = 6;
 my $nguess = 0;
 my $wordlen = 5;
 my %all_words;
-my %common_words;
+my @common_words;
 my %possible_words;
 my @correct;
 my $answer;
@@ -40,8 +41,9 @@ my $debug = 0;
 while ($_ = $ARGV[0] and /^-/) {
     shift;
     /^-(\d+)$/ && ($day=$1);
-    /^-auto/ && ($auto++);
-    /^-debug/ && ($debug++);
+    /^--?today$/ && ($day=0);
+    /^--?auto/ && ($auto++);
+    /^--?debug/ && ($debug++);
 }
 
 setup();
@@ -77,8 +79,8 @@ sub setup {
     # read the wordlists and create hashes
     #
     foreach my $word (split /\n\r?/, read_file($words)) {
-	$common_words{$word}++;
-	$all_words{$word}++;
+	push(@common_words,$word);
+	$all_words{$word} = 2;  # prefer common words when we guess
     }
     foreach my $word (split /\n\r?/, read_file($dict)) {
 	$all_words{$word}++;
@@ -86,21 +88,36 @@ sub setup {
     %possible_words = %all_words;
 
     if (defined $day && -x "wordle.pl") {
-	$answer = `wordle.pl -$day`;
-	chomp $answer;
+	my $start = 18797;			# days since the epoch
+	my $today = time - 60*60*6;		# time zone adjustment
+	$today = int $today / (60*60*24);	# convert from seconds to days
+	my $n = $today - $start - $day + 1;
+	while ($n < 1) {			# wrap if too small
+	    $n += scalar @common_words;
+	}
+	while ($n > scalar @common_words) {	# wrap if too large
+	    $n -= scalar @common_words;
+	}
+	$answer = $common_words[$n-1];
     } elsif (exists $ARGV[0]) {
 	if ($ARGV[0] =~ /^[a-z]{$wordlen}$/) {  # use the given word
 	    $answer = $ARGV[0];
 	    $possible_words{$answer} = 1;
 	    $all_words{$answer} = 1;
 	    #srand 1;
+	} elsif ($ARGV[0] =~ /^(\d+)$/) {  # use the Nth word in the list
+	    my $n = $1;
+	    while ($n > scalar @common_words) {	# wrap if too large
+		$n -= scalar @common_words;
+	    }
+	    $answer = $common_words[$n-1];
 	} else {
 	    print "Invalid word $ARGV[0]\n";
 	    exit;
 	}
 	shift @ARGV;
     } else {  # we pick a word
-	$answer = (keys %common_words)[int rand keys %common_words];
+	$answer = $common_words[int rand @common_words];
     }
 
     @correct = split //, $answer;
