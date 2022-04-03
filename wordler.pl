@@ -139,15 +139,17 @@ sub guess {
     while (!defined $guess) {
 	print "guess $nguess: ";
 	if (!$auto) {
-	    $try = lc <>;
+	    $try = <>;
+	    exit if !defined $try;
+	    $try = lc $try;
 	}
 	chomp $try;
 	if (exists $all_words{$try}) {
 	    $guess = $try;
 	    $you++;
 	} elsif ($try eq "") {     # ok, I'll pick
-	    if (keys %possible_words < 1) {
-		print "I give up\n";
+	    if (keys %possible_words < 1) {  # shouldn't happen
+		print "I give up. The word was $answer\n";
 		exit;
 	    }
 	    for (my $i=1; $i < 5; $i++) {
@@ -161,8 +163,11 @@ sub guess {
 	    }
 	    $me++;
 	} else {  # invalid input, try again
-	    print "remaining: $letters\n" if lc $try eq "abcde";
+	    print "remaining: $letters\n" if lc $try eq "abc";
 	    print "regex: $pattern\n" if lc $try eq "regex";
+	    print "words: ", join(' ', keys %possible_words, "\n")
+		if lc $try eq "show"
+		   and scalar keys %possible_words < 9;
 	}
     }
     return $guess;
@@ -222,8 +227,8 @@ sub check {
     #
     # if the guess contains duplicate letters, ...
     #
-    my %g_count;
     my $before = keys %possible_words;
+    my %g_count;
     foreach my $letter (split //, $guess) {
 	$g_count{$letter}++;
     }
